@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">   <title>Gescol - Salidas</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<nav class="navbar">
+    <div class="nav-left">
+        <img src="logo.png" alt="Logo">
+        <span>GESCOL</span>
+    </div>
+    
+    <div class="nav-right">
+        <a href="index.html">Principal</a>
+        <a href="asistencia.html">Asistencia</a>
+        <a href="salida.html">Salidas</a>
+        <a href="relacion.html">Acudientes</a>
+        <a href="titulares.html">Titulares</a>
+        <a href="transporte.html">Transporte</a>
+        <a href="rutas.html">Rutas</a>
+        <a href="grados.html">Grados</a>
+        <a href="alumnos.html">Alumnos</a>
+    </div>
+</nav>
+
+<h2>Permiso de Salida Anticipada</h2>
+
+<div class="card">
+
+    <label>Grado</label>
+    <select id="grado" onchange="cargarAlumnos()">
+        <option value="">Seleccione grado</option>
+    </select>
+
+    <label>Alumno</label>
+    <select id="alumno">
+        <option value="">Primero seleccione un grado</option>
+    </select>
+
+    <label>Fecha</label>
+    <input type="date" id="fecha">
+
+    <label>Hora de salida</label>
+    <input type="time" id="hora">
+
+    <label>Motivo</label>
+    <textarea id="motivo"></textarea>
+
+    <label>Coordinador</label>
+    <select id="coordinador"></select>
+
+    <button onclick="registrarSalida()">Registrar Salida</button>
+
+</div>
+
+<hr>
+
+<h3>Salidas registradas hoy</h3>
+<table>
+<thead>
+<tr>
+    <th>Alumno</th><th>Grado</th><th>Hora</th><th>Motivo</th><th>Coordinador</th>
+</tr>
+</thead>
+<tbody id="tablaSalidas"></tbody>
+</table>
+
+<script>
+
+const API = "http://localhost:8080/api";
+
+async function request(url, method="GET", data=null){
+    const opt = { method, headers: {"Content-Type":"application/json"} };
+    if(data) opt.body = JSON.stringify(data);
+    const res = await fetch(API+url, opt);
+    const ct = res.headers.get("content-type") || "";
+    let body;
+    if (ct.includes("application/json")) body = await res.json();
+    else body = await res.text();
+    if (!res.ok) throw new Error(body);
+    return body;
+}
+
+async function cargarDatos(){
+    const grados = await request("/grados");
+    const titulares = await request("/titulares");
+
+    const selGrado = document.getElementById("grado");
+    selGrado.innerHTML = "<option value=''>Seleccione grado</option>";
+    grados.forEach(g => {
+        selGrado.innerHTML += `<option value="${g.id}">${g.nombre}</option>`;
+    });
+
+    const selCoord = document.getElementById("coordinador");
+    selCoord.innerHTML = "";
+    titulares
+    .filter(t => t.tipo === "COORDINADOR")
+    .forEach(t => {
+        selCoord.innerHTML += `<option value="${t.id}">${t.nombre} ${t.apellido}</option>`;
+    });
+
+    document.getElementById("fecha").value = new Date().toISOString().split("T")[0];
+
+    listarSalidasHoy();
+}
+
+async function cargarAlumnos(){
+    const g = document.getElementById("grado").value;
+    const selAlumno = document.getElementById("alumno");
+    selAlumno.innerHTML = "<option value=''>Cargando...</option>";
+
+    if (!g) {
+        selAlumno.innerHTML = "<option value=''>Primero seleccione un grado</option>";
+        return;
+    }
+
+    const todos = await request("/alumnos");
+    const filtrados = todos.filter(a => a.grado && a.grado.id == g);
+
+    selAlumno.innerHTML = "";
+    filtrados.forEach(a => {
+        selAlumno.innerHTML += `<option value="${a.id}">${a.nombre} ${a.apellido} (${a.codigoEstudiantil})</option>`;
+    });
+
+    if (filtrados.length === 0) {
+        selAlumno.innerHTML = "<option value=''>No hay alumnos en este grado</option>";
+    }
+}
+
+async function registrarSalida(){
+    const alumnoId = document.getElementById("alumno").value;
+    const fecha = document.getElementById("fecha").value;
+    const hora = document.getElementById("hora").value;
+    const motivo = document.getElementById("motivo").value;
+    const coordId = document.getElementById("coordinador").value;
+
+    if (!alumnoId || !hora || !motivo || !coordId) {
+        alert("Complete todos los campos");
+        return;
+    }
+
+    const datosSalida = {
+        alumno: { id: parseInt(alumnoId) },
+        fecha: fecha,
+        estado: "ASISTIO",
+        salidaAnticipada: true,
+        horaSalida: hora,
+        motivoSalida: motivo,
+        coordinador: { id: parseInt(coordId) }
+    };
+
+    try {
+        // Buscar si ya existe asistencia registrada para este alumno hoy
+        const registros = await request("/asistencia/alumno/" + alumnoId);
+        const existente = registros.find(r => r.fecha === fecha);
+
+        if (existente) {
+            await request("/asistencia/" + existente.id, "PUT", datosSalida);
+        } else {
+            await request("/asistencia", "POST", datosSalida);
+        }
+
+        // Auto-crear ControlRuta ENTREGA para que la ruta sepa que este alumno ya salió
+        const alumno = await request("/alumnos/" + alumnoId);
+        const rutaDestino = alumno.rutaSalida || alumno.rutaIngreso;
+        if (rutaDestino) {
+            await request("/control-ruta/guardar", "POST", {
+                rutaId: rutaDestino.id,
+                fecha: fecha,
+                tipo: "ENTREGA",
+                items: [{ alumnoId: parseInt(alumnoId), llego: false }]
+            });
+        }
+
+        alert("Salida registrada");
+
+        document.getElementById("hora").value = "";
+        document.getElementById("motivo").value = "";
+        listarSalidasHoy();
+    } catch(e) {
+        alert("Error: " + e.message);
+    }
+}
+
+async function listarSalidasHoy(){
+    const hoy = new Date().toISOString().split("T")[0];
+    const todas = await request("/asistencia");
+
+    const filtradas = todas.filter(r =>
+        r.fecha === hoy &&
+        r.salidaAnticipada === true
+    );
+
+    const tbody = document.getElementById("tablaSalidas");
+    tbody.innerHTML = "";
+
+    if (filtradas.length === 0) {
+        tbody.innerHTML = "<tr><td colspan='5'>No hay salidas registradas hoy</td></tr>";
+        return;
+    }
+
+    filtradas.forEach(r => {
+        tbody.innerHTML += `
+        <tr>
+            <td>${r.alumno.nombre} ${r.alumno.apellido}</td>
+            <td>${r.alumno.grado ? r.alumno.grado.nombre : "-"}</td>
+            <td>${r.horaSalida || "-"}</td>
+            <td>${r.motivoSalida || "-"}</td>
+            <td>${r.coordinador ? r.coordinador.nombre + " " + r.coordinador.apellido : "-"}</td>
+        </tr>`;
+    });
+}
+
+window.onload = cargarDatos;
+
+</script>
+
+</body>
+</html>

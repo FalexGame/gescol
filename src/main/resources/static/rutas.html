@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gescol - Rutas</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .tipo-toggle { display: flex; gap: 15px; margin: 10px 0; }
+        .tipo-toggle label { display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 15px; }
+        .tipo-toggle input[type="radio"] { width: auto; accent-color: #58c718; }
+
+        .badge-asistio     { background:#d4edda; color:#155724; padding:3px 8px; border-radius:4px; font-size:12px; font-weight:bold; }
+        .badge-no-asistio  { background:#f8d7da; color:#721c24; padding:3px 8px; border-radius:4px; font-size:12px; font-weight:bold; }
+        .badge-tarde       { background:#fff3cd; color:#856404; padding:3px 8px; border-radius:4px; font-size:12px; font-weight:bold; }
+        .badge-salida-anticipada { background:#ffeeba; color:#856404; padding:3px 8px; border-radius:4px; font-size:12px; font-weight:bold; }
+        .badge-sin-registro { background:#e2e3e5; color:#383d41; padding:3px 8px; border-radius:4px; font-size:12px; font-weight:bold; }
+        .badge-presente    { background:#cce5ff; color:#004085; padding:3px 8px; border-radius:4px; font-size:12px; font-weight:bold; }
+        .badge-distraido   { background:#f8d7da; color:#721c24; padding:3px 8px; border-radius:4px; font-size:12px; font-weight:bold; }
+
+        td.estado-col { text-align: center; vertical-align: middle; }
+        td.chk-col    { text-align: center; vertical-align: middle; }
+
+        .entrega-info { font-size: 13px; margin-top: 8px; }
+        .entrega-info span + span { margin-left: 15px; }
+    </style>
+</head>
+<body>
+<nav class="navbar">
+    <div class="nav-left">
+        <img src="logo.png" alt="Logo">
+        <span>GESCOL</span>
+    </div>
+    <div class="nav-right">
+        <a href="index.html">Principal</a>
+        <a href="asistencia.html">Asistencia</a>
+        <a href="salida.html">Salidas</a>
+        <a href="relacion.html">Acudientes</a>
+        <a href="titulares.html">Titulares</a>
+        <a href="transporte.html">Transporte</a>
+        <a href="rutas.html">Rutas</a>
+        <a href="grados.html">Grados</a>
+        <a href="alumnos.html">Alumnos</a>
+    </div>
+</nav>
+
+<center>
+
+<h2>Control de Rutas</h2>
+
+<div class="card">
+    <label>Ruta</label>
+    <select id="ruta"><option value="">Seleccione ruta</option></select>
+
+    <div class="tipo-toggle">
+        <label><input type="radio" name="tipo" value="INGRESO" checked onchange="onTipoChange()"> INGRESO</label>
+        <label><input type="radio" name="tipo" value="ENTREGA" onchange="onTipoChange()"> ENTREGA</label>
+    </div>
+
+    <label>Fecha</label>
+    <input type="date" id="fecha">
+
+    <button onclick="cargarRuta()">Cargar</button>
+</div>
+
+<div class="card" id="tablaContainer" style="display:none;">
+    <h3 id="tituloLista"></h3>
+    <div class="entrega-info" id="entregaInfo" style="display:none;">
+        <span class="badge-asistio">Asistió</span>
+        <span class="badge-tarde">Tarde</span>
+        <span class="badge-no-asistio">No Asistió</span>
+        <span class="badge-salida-anticipada">Salida Anticipada</span>
+        <span class="badge-sin-registro">Sin registro</span>
+        <span class="badge-distraido">Jugando / Distraído</span>
+    </div>
+    <div id="ingresoHoraContainer" style="margin-bottom:8px;display:none;">
+        <label>Hora de llegada:</label>
+        <input type="time" id="horaIngreso" style="width:150px;">
+    </div>
+    <table>
+    <thead>
+    <tr id="tablaHeaders">
+        <th>Código</th>
+        <th>Nombre</th>
+        <th>Apellido</th>
+        <th>Grado</th>
+        <th>¿Llegó?</th>
+    </tr>
+    </thead>
+    <tbody id="tablaAlumnos"></tbody>
+    </table>
+    <button onclick="guardarControl()" style="margin-top:10px;">Guardar</button>
+</div>
+
+<div id="resumen" style="display:none; margin-top:15px;"></div>
+
+</center>
+
+<script>
+
+const API = "http://localhost:8080/api";
+
+async function request(url, method="GET", data=null){
+    const opt = { method, headers: {"Content-Type":"application/json"} };
+    if(data) opt.body = JSON.stringify(data);
+    const res = await fetch(API+url, opt);
+    const ct = res.headers.get("content-type") || "";
+    let body;
+    if (ct.includes("application/json")) body = await res.json();
+    else body = await res.text();
+    if (!res.ok) throw new Error(body);
+    return body;
+}
+
+async function cargarRutas(){
+    const rutas = await request("/rutas");
+    const sel = document.getElementById("ruta");
+    sel.innerHTML = "<option value=''>Seleccione ruta</option>";
+    rutas.forEach(r => {
+        sel.innerHTML += `<option value="${r.id}">${r.numeroRuta} - ${r.placaVehiculo}</option>`;
+    });
+}
+
+function onTipoChange(){
+    document.getElementById("tablaContainer").style.display = "none";
+}
+
+function badgeEstado(estado, salidaAnticipada) {
+    if (estado === "ASISTIO") return '<span class="badge-asistio">Asistió</span>';
+    if (estado === "TARDE")   return '<span class="badge-tarde">Tarde</span>';
+    if (estado === "AUSENTE") return '<span class="badge-no-asistio">No Asistió</span>';
+    return '<span class="badge-sin-registro">Sin registro</span>';
+}
+
+async function cargarRuta(){
+    const rutaId = document.getElementById("ruta").value;
+    const tipo = document.querySelector('input[name="tipo"]:checked').value;
+    const fecha = document.getElementById("fecha").value;
+
+    if (!rutaId) { alert("Seleccione una ruta"); return; }
+    if (!fecha) { alert("Seleccione una fecha"); return; }
+
+    const ruta = await request("/rutas/" + rutaId);
+    const tbody = document.getElementById("tablaAlumnos");
+    const info = document.getElementById("entregaInfo");
+
+    document.getElementById("tablaHeaders").innerHTML =
+        tipo === "ENTREGA"
+            ? "<th>Código</th><th>Nombre</th><th>Apellido</th><th>Grado</th><th>Estado</th><th>¿Recogido?</th>"
+            : "<th>Código</th><th>Nombre</th><th>Apellido</th><th>Grado</th><th>¿Llegó?</th>";
+
+    document.getElementById("ingresoHoraContainer").style.display = tipo === "INGRESO" ? "" : "none";
+
+    if (tipo === "ENTREGA") {
+        // Usar endpoint enriquecido
+        let data;
+        try {
+            data = await request(`/control-ruta/listado-entrega?rutaId=${rutaId}&fecha=${fecha}`);
+        } catch(e) {
+            alert("Error al cargar: " + e.message);
+            return;
+        }
+
+        document.getElementById("tituloLista").textContent =
+            `Entrega - ${ruta.numeroRuta} (${data.length} alumnos)`;
+
+        info.style.display = "";
+
+        tbody.innerHTML = "";
+
+        let asistieron = 0, noAsistieron = 0, salidaAnticipada = 0, sinRegistro = 0;
+
+        data.forEach(a => {
+            if (a.estadoAsistencia === "ASISTIO") asistieron++;
+            else if (a.estadoAsistencia === "AUSENTE") noAsistieron++;
+            else if (a.estadoAsistencia === "SIN_REGISTRO") sinRegistro++;
+            if (a.salidaAnticipada) salidaAnticipada++;
+
+            const puedeRecoger = a.asistio && !a.salidaAnticipada;
+
+            let estadoHtml;
+            if (a.salidaAnticipada) {
+                estadoHtml = badgeEstado(a.estadoAsistencia, true) + ' <span class="badge-salida-anticipada">Salida Anticipada</span>';
+            } else {
+                estadoHtml = badgeEstado(a.estadoAsistencia, false);
+            }
+
+            const chkChecked = a.llego === true;
+            const chkDisabled = !puedeRecoger ? "disabled" : "";
+            const llego = a.llego;
+
+            let chkHtml;
+            if (!puedeRecoger) {
+                chkHtml = `<span style="color:#999;">N/A</span>`;
+            } else if (llego === false) {
+                chkHtml = `<span class="badge-distraido">Jugando / Distraído</span> <input type="checkbox" id="chk_${a.alumnoId}" ${chkChecked ? "checked" : ""}>`;
+            } else {
+                chkHtml = `<input type="checkbox" id="chk_${a.alumnoId}" ${chkChecked ? "checked" : ""}>`;
+            }
+
+            tbody.innerHTML += `
+            <tr>
+                <td>${a.codigo}</td>
+                <td>${a.nombre}</td>
+                <td>${a.apellido}</td>
+                <td>${a.grado}</td>
+                <td class="estado-col">${estadoHtml}</td>
+                <td class="chk-col">${chkHtml}</td>
+            </tr>`;
+        });
+
+        document.getElementById("tablaContainer").style.display = "";
+        document.getElementById("resumen").style.display = "none";
+
+        // Pequeño resumen en el título
+        document.getElementById("tituloLista").textContent =
+            `Entrega - ${ruta.numeroRuta} (${data.length} alumnos | Asistieron: ${asistieron} | No asistieron: ${noAsistieron} | Salida anticipada: ${salidaAnticipada} | Sin registro: ${sinRegistro})`;
+
+    } else {
+        // INGRESO - mismo comportamiento anterior
+        info.style.display = "none";
+
+        const todos = await request("/alumnos");
+        const campo = "rutaIngreso";
+        const alumnosRuta = todos.filter(a => a[campo] && a[campo].id == rutaId);
+
+        let existentes = [];
+        try {
+            existentes = await request(`/control-ruta?rutaId=${rutaId}&fecha=${fecha}&tipo=INGRESO`);
+        } catch(e) {}
+
+        const existentesMap = {};
+        let horaCompartida = "";
+        existentes.forEach(e => {
+            existentesMap[e.alumnoId] = e;
+            if (!horaCompartida && e.hora) horaCompartida = e.hora;
+        });
+
+        document.getElementById("horaIngreso").value = horaCompartida;
+
+        document.getElementById("tituloLista").textContent =
+            `Ingreso - ${ruta.numeroRuta} (${alumnosRuta.length} alumnos)`;
+
+        tbody.innerHTML = "";
+
+        if (alumnosRuta.length === 0) {
+            tbody.innerHTML = "<tr><td colspan='5'>No hay alumnos asignados a esta ruta para ingreso</td></tr>";
+            document.getElementById("tablaContainer").style.display = "";
+            return;
+        }
+
+        alumnosRuta.forEach(a => {
+            const existente = existentesMap[a.id];
+            const checked = existente ? (existente.llego ? "checked" : "") : "checked";
+            tbody.innerHTML += `
+            <tr>
+                <td>${a.codigoEstudiantil}</td>
+                <td>${a.nombre}</td>
+                <td>${a.apellido}</td>
+                <td>${a.grado ? a.grado.nombre : "-"}</td>
+                <td><input type="checkbox" id="chk_${a.id}" ${checked}></td>
+            </tr>`;
+        });
+
+        document.getElementById("tablaContainer").style.display = "";
+        document.getElementById("resumen").style.display = "none";
+    }
+}
+
+async function guardarControl(){
+    const rutaId = document.getElementById("ruta").value;
+    const tipo = document.querySelector('input[name="tipo"]:checked').value;
+    const fecha = document.getElementById("fecha").value;
+
+    // Para ENTREGA: obtener los alumnos del listado enriquecido
+    let alumnos;
+    if (tipo === "ENTREGA") {
+        const data = await request(`/control-ruta/listado-entrega?rutaId=${rutaId}&fecha=${fecha}`);
+        alumnos = data;
+    } else {
+        const todos = await request("/alumnos");
+        const campo = "rutaIngreso";
+        alumnos = todos.filter(a => a[campo] && a[campo].id == rutaId);
+    }
+
+    const horaCompartida = tipo === "INGRESO" ? (document.getElementById("horaIngreso").value || null) : null;
+
+    const items = [];
+    for (const a of alumnos) {
+        const alumnoId = a.alumnoId || a.id;
+        const chk = document.getElementById("chk_" + alumnoId);
+        // Para ENTREGA: solo enviar alumnos que tengan checkbox (asistieron y sin salida anticipada)
+        if (tipo === "ENTREGA" && !chk) continue;
+        const item = {
+            alumnoId: alumnoId,
+            llego: chk ? chk.checked : false
+        };
+        if (tipo === "INGRESO") item.hora = horaCompartida;
+        items.push(item);
+    }
+
+    try {
+        const res = await request("/control-ruta/guardar", "POST", {
+            rutaId: parseInt(rutaId),
+            fecha: fecha,
+            tipo: tipo,
+            items: items
+        });
+        document.getElementById("resumen").style.display = "";
+        document.getElementById("resumen").innerHTML =
+            `<div style="background:#d4edda;padding:12px;border-radius:8px;">
+                ✅ ${res.guardados} registros guardados correctamente
+            </div>`;
+        cargarRuta();
+    } catch(e) {
+        alert("Error: " + e.message);
+    }
+}
+
+window.onload = () => {
+    document.getElementById("fecha").value = new Date().toISOString().split("T")[0];
+    cargarRutas();
+};
+
+</script>
+</body>
+</html>

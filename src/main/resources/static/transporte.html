@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">   <title>Gescol - Rutas</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body >
+    <center>
+<nav class="navbar">
+    <div class="nav-left">
+        <img src="logo.png" alt="Logo">
+        <span>GESCOL</span>
+    </div>
+    
+    <div class="nav-right">
+        <a href="index.html">Principal</a>
+        <a href="asistencia.html">Asistencia</a>
+        <a href="salida.html">Salidas</a>
+        <a href="relacion.html">Acudientes</a>
+        <a href="titulares.html">Titulares</a>
+        <a href="transporte.html">Transporte</a>
+        <a href="rutas.html">Rutas</a>
+        <a href="grados.html">Grados</a>
+        <a href="alumnos.html">Alumnos</a>
+    </div>
+</nav>
+
+<h2>Transporte</h2>
+
+<div class="grid">
+<div class="card">
+<input id="rnumero" placeholder="Número ruta">
+<input id="rplaca" placeholder="Placa">
+<input id="rconductor" placeholder="Conductor">
+<input id="rtel" placeholder="Teléfono">
+<input id="rmonitor" placeholder="Monitor">
+<input id="rtelmonitor" placeholder="Teléfono monitor">
+
+<button id="btnGuardarRuta" onclick="guardarRuta()">Guardar</button>
+<button id="btnCancelarRuta" onclick="cancelarEdicionRuta()" style="display:none">Cancelar</button>
+</div>
+
+<div class="card">
+<table>
+<thead>
+<tr>
+<th>Número</th><th>Placa</th><th>Conductor</th><th>Teléfono</th><th>Monitor</th><th>Tel Monitor</th><th>Acciones</th>
+</tr>
+</thead>
+<tbody id="tablaRutas"></tbody>
+</table>
+</div>
+</div>
+
+<div class="card" id="alumnosRutaCard" style="display:none;">
+    <h3 id="alumnosRutaTitulo"></h3>
+    <table>
+    <thead>
+    <tr>
+        <th>Código</th><th>Nombre</th><th>Apellido</th><th>Grado</th><th>Trayecto</th>
+    </tr>
+    </thead>
+    <tbody id="tablaAlumnosRuta"></tbody>
+    </table>
+</div>
+</center>
+<script>
+
+const API = "http://localhost:8080/api";
+
+async function request(url, method="GET", data=null){
+    const opt = { method, headers: {"Content-Type":"application/json"} };
+    if(data) opt.body = JSON.stringify(data);
+    const res = await fetch(API+url, opt);
+    const ct = res.headers.get("content-type") || "";
+    let body;
+    if (ct.includes("application/json")) body = await res.json();
+    else body = await res.text();
+    if (!res.ok) throw new Error(body);
+    return body;
+}
+
+let editRutaId = null;
+
+function limpiarFormRuta(){
+    document.getElementById("rnumero").value = "";
+    document.getElementById("rplaca").value = "";
+    document.getElementById("rconductor").value = "";
+    document.getElementById("rtel").value = "";
+    document.getElementById("rmonitor").value = "";
+    document.getElementById("rtelmonitor").value = "";
+    editRutaId = null;
+    document.getElementById("btnGuardarRuta").textContent = "Guardar";
+    document.getElementById("btnCancelarRuta").style.display = "none";
+}
+
+function cancelarEdicionRuta(){ limpiarFormRuta(); }
+
+async function editarRuta(id){
+    editRutaId = id;
+    const r = await request("/rutas/" + id);
+    document.getElementById("rnumero").value = r.numeroRuta;
+    document.getElementById("rplaca").value = r.placaVehiculo;
+    document.getElementById("rconductor").value = r.nombreConductor;
+    document.getElementById("rtel").value = r.telefonoConductor;
+    document.getElementById("rmonitor").value = r.nombreMonitor;
+    document.getElementById("rtelmonitor").value = r.telefonoMonitor;
+    document.getElementById("btnGuardarRuta").textContent = "Actualizar";
+    document.getElementById("btnCancelarRuta").style.display = "";
+}
+
+async function guardarRuta(){
+    try {
+        const body = {
+            numeroRuta: rnumero.value,
+            placaVehiculo: rplaca.value,
+            nombreConductor: rconductor.value,
+            telefonoConductor: rtel.value,
+            nombreMonitor: rmonitor.value,
+            telefonoMonitor: rtelmonitor.value
+        };
+
+        if (editRutaId) {
+            await request("/rutas/" + editRutaId, "PUT", body);
+        } else {
+            await request("/rutas", "POST", body);
+        }
+
+        listarRutas();
+        limpiarFormRuta();
+    } catch(e) {
+        alert("Error: " + e.message);
+    }
+}
+
+function ocultarAlumnos(){
+    document.getElementById("alumnosRutaCard").style.display = "none";
+}
+
+async function verAlumnos(rutaId, rutaNumero){
+    const todos = await request("/alumnos");
+    const filtrados = todos.filter(a =>
+        (a.rutaIngreso && a.rutaIngreso.id === rutaId) ||
+        (a.rutaSalida && a.rutaSalida.id === rutaId)
+    );
+
+    document.getElementById("alumnosRutaTitulo").textContent = `Alumnos de ${rutaNumero} (${filtrados.length})`;
+    const tbody = document.getElementById("tablaAlumnosRuta");
+    tbody.innerHTML = "";
+
+    filtrados.forEach(a => {
+        const trayectos = [];
+        if (a.rutaIngreso && a.rutaIngreso.id === rutaId) trayectos.push("Ingreso");
+        if (a.rutaSalida && a.rutaSalida.id === rutaId) trayectos.push("Salida");
+        tbody.innerHTML += `
+        <tr>
+            <td>${a.codigoEstudiantil}</td>
+            <td>${a.nombre}</td>
+            <td>${a.apellido}</td>
+            <td>${a.grado ? a.grado.nombre : "-"}</td>
+            <td>${trayectos.join(" / ")}</td>
+        </tr>`;
+    });
+
+    document.getElementById("alumnosRutaCard").style.display = "";
+}
+
+async function listarRutas(){
+    ocultarAlumnos();
+    let data = await request("/rutas");
+    tablaRutas.innerHTML="";
+
+    data.forEach(r=>{
+        tablaRutas.innerHTML+=`
+        <tr>
+            <td>${r.numeroRuta}</td>
+            <td>${r.placaVehiculo}</td>
+            <td>${r.nombreConductor}</td>
+            <td>${r.telefonoConductor}</td>
+            <td>${r.nombreMonitor}</td>
+            <td>${r.telefonoMonitor}</td>
+            <td>
+                <button class="btn-view" onclick="verAlumnos(${r.id}, '${r.numeroRuta}')">Ver alumnos</button>
+                <button class="btn-edit" onclick="editarRuta(${r.id})">Editar</button>
+                <button class="btn-delete" onclick="delRuta(${r.id})">X</button>
+            </td>
+        </tr>`;
+    });
+}
+
+async function delRuta(id){
+    try {
+        await request("/rutas/"+id,"DELETE");
+        listarRutas();
+    } catch(e) {
+        alert("Error: " + e.message);
+    }
+}
+
+window.onload = ()=>{
+    listarRutas();
+}
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">   <title>Gescol - Grados</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body >
+    <center>
+<nav class="navbar">
+    <div class="nav-left">
+        <img src="logo.png" alt="Logo">
+        <span>GESCOL</span>
+    </div>
+    
+    <div class="nav-right">
+        <a href="index.html">Principal</a>
+        <a href="asistencia.html">Asistencia</a>
+        <a href="salida.html">Salidas</a>
+        <a href="relacion.html">Acudientes</a>
+        <a href="titulares.html">Titulares</a>
+        <a href="transporte.html">Transporte</a>
+        <a href="rutas.html">Rutas</a>
+        <a href="grados.html">Grados</a>
+        <a href="alumnos.html">Alumnos</a>
+    </div>
+</nav>
+
+<h2>Grados</h2>
+
+<div class="grid">
+<div class="card">
+<input id="gnombre" placeholder="Nombre del grado (ej: 6A)">
+<button id="btnGuardarGrado" onclick="guardarGrado()">Guardar</button>
+<button id="btnCancelarGrado" onclick="cancelarEdicionGrado()" style="display:none">Cancelar</button>
+</div>
+
+<div class="card">
+<table>
+<thead>
+<tr>
+<th>Nombre</th><th>Acciones</th>
+</tr>
+</thead>
+<tbody id="tablaGrados"></tbody>
+</table>
+</div>
+</div>
+
+<div class="card" id="alumnosGradoCard" style="display:none;">
+    <h3 id="alumnosGradoTitulo"></h3>
+    <table>
+    <thead>
+    <tr>
+        <th>Código</th><th>Nombre</th><th>Apellido</th><th>Ruta Ingreso</th><th>Ruta Salida</th>
+    </tr>
+    </thead>
+    <tbody id="tablaAlumnosGrado"></tbody>
+    </table>
+</div>
+</center>
+<script>
+
+const API = "http://localhost:8080/api";
+
+async function request(url, method="GET", data=null){
+    const opt = { method, headers: {"Content-Type":"application/json"} };
+    if(data) opt.body = JSON.stringify(data);
+    const res = await fetch(API+url, opt);
+    const ct = res.headers.get("content-type") || "";
+    let body;
+    if (ct.includes("application/json")) body = await res.json();
+    else body = await res.text();
+    if (!res.ok) throw new Error(body);
+    return body;
+}
+
+let editGradoId = null;
+
+function limpiarFormGrado(){
+    document.getElementById("gnombre").value = "";
+    editGradoId = null;
+    document.getElementById("btnGuardarGrado").textContent = "Guardar";
+    document.getElementById("btnCancelarGrado").style.display = "none";
+}
+
+function cancelarEdicionGrado(){ limpiarFormGrado(); }
+
+async function editarGrado(id){
+    editGradoId = id;
+    const g = await request("/grados/" + id);
+    document.getElementById("gnombre").value = g.nombre;
+    document.getElementById("btnGuardarGrado").textContent = "Actualizar";
+    document.getElementById("btnCancelarGrado").style.display = "";
+}
+
+async function guardarGrado(){
+    try {
+        const body = { nombre: document.getElementById("gnombre").value };
+
+        if (editGradoId) {
+            await request("/grados/" + editGradoId, "PUT", body);
+        } else {
+            await request("/grados", "POST", body);
+        }
+
+        listarGrados();
+        limpiarFormGrado();
+    } catch(e) {
+        alert("Error: " + e.message);
+    }
+}
+
+function ocultarAlumnos(){
+    document.getElementById("alumnosGradoCard").style.display = "none";
+}
+
+async function verAlumnos(gradoId, gradoNombre){
+    const todos = await request("/alumnos");
+    const filtrados = todos.filter(a => a.grado && a.grado.id === gradoId);
+
+    document.getElementById("alumnosGradoTitulo").textContent = `Alumnos de ${gradoNombre} (${filtrados.length})`;
+    const tbody = document.getElementById("tablaAlumnosGrado");
+    tbody.innerHTML = "";
+
+    filtrados.forEach(a => {
+        tbody.innerHTML += `
+        <tr>
+            <td>${a.codigoEstudiantil}</td>
+            <td>${a.nombre}</td>
+            <td>${a.apellido}</td>
+            <td>${a.rutaIngreso ? a.rutaIngreso.numeroRuta : "Acudiente"}</td>
+            <td>${a.rutaSalida ? a.rutaSalida.numeroRuta : "Acudiente"}</td>
+        </tr>`;
+    });
+
+    document.getElementById("alumnosGradoCard").style.display = "";
+}
+
+async function listarGrados(){
+    ocultarAlumnos();
+    const data = await request("/grados");
+    tablaGrados.innerHTML = "";
+    data.forEach(g => {
+        tablaGrados.innerHTML += `
+        <tr>
+            <td>${g.nombre}</td>
+            <td>
+                <button class="btn-view" onclick="verAlumnos(${g.id}, '${g.nombre}')">Ver alumnos</button>
+                <button class="btn-edit" onclick="editarGrado(${g.id})">Editar</button>
+                <button class="btn-delete" onclick="delGrado(${g.id})">X</button>
+            </td>
+        </tr>`;
+    });
+}
+
+async function delGrado(id){
+    try {
+        await request("/grados/"+id,"DELETE");
+        listarGrados();
+    } catch(e) {
+        alert("Error: " + e.message);
+    }
+}
+
+window.onload = ()=>{
+    listarGrados();
+}
+
+</script>
+
+</body>
+</html>

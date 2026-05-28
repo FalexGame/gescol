@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">   <title>Gescol</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<nav class="navbar">
+    <div class="nav-left">
+        <img src="logo.png" alt="Logo">
+        <span>GESCOL</span>
+    </div>
+    
+    <div class="nav-right">
+        <a href="index.html">Principal</a>
+        <a href="asistencia.html">Asistencia</a>
+        <a href="salida.html">Salidas</a>
+        <a href="relacion.html">Acudientes</a>
+        <a href="titulares.html">Titulares</a>
+        <a href="transporte.html">Transporte</a>
+        <a href="rutas.html">Rutas</a>
+        <a href="grados.html">Grados</a>
+        <a href="alumnos.html">Alumnos</a>
+    </div>
+</nav>
+
+<h2>Asignar Acudiente a Alumno</h2>
+
+<div class="card">
+    <label>Alumno</label>
+    <select id="alumnoSelect"></select>
+
+    <label>Acudiente</label>
+    <select id="acudienteSelect"></select>
+
+    <input id="parentesco" placeholder="Parentesco (Madre, Padre...)">
+
+    <button onclick="asignar()">Asignar</button>
+</div>
+
+<hr>
+
+<h2>Acudientes del Alumno</h2>
+
+<div class="card">
+    <label>Seleccionar Alumno</label>
+    <select id="alumnoConsulta" onchange="consultarAcudientes()"></select>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Nombre</th>
+                <th>Parentesco</th>
+            </tr>
+        </thead>
+        <tbody id="tablaRelacion"></tbody>
+    </table>
+</div>
+
+<script>
+
+const API = "http://localhost:8080/api";
+
+// 🔷 REQUEST
+async function request(url, method="GET", data=null){
+    const opt = { method, headers: {"Content-Type":"application/json"} };
+    if(data) opt.body = JSON.stringify(data);
+    const res = await fetch(API+url, opt);
+    const ct = res.headers.get("content-type") || "";
+    let body;
+    if (ct.includes("application/json")) body = await res.json();
+    else body = await res.text();
+    if (!res.ok) throw new Error(body);
+    return body;
+}
+
+//  CARGAR SELECTS
+async function cargarDatos(){
+    const alumnos = await request("/alumnos");
+    const acudientes = await request("/acudientes");
+
+    alumnoSelect.innerHTML = "";
+    alumnoConsulta.innerHTML = "";
+    acudienteSelect.innerHTML = "";
+
+    alumnos.forEach(a=>{
+        alumnoSelect.innerHTML += `<option value="${a.id}">${a.nombre} ${a.apellido}</option>`;
+        alumnoConsulta.innerHTML += `<option value="${a.id}">${a.nombre} ${a.apellido}</option>`;
+    });
+
+    acudientes.forEach(a=>{
+        acudienteSelect.innerHTML += `<option value="${a.id}">${a.nombre} ${a.apellido}</option>`;
+    });
+}
+
+//  ASIGNAR RELACIÓN
+async function asignar(){
+    await request("/alumno-acudiente","POST",{
+        alumno: { id: alumnoSelect.value },
+        acudiente: { id: acudienteSelect.value },
+        parentesco: parentesco.value
+    });
+
+    parentesco.value = "";
+    alert("Relación creada");
+
+    consultarAcudientes();
+}
+
+// CONSULTAR ACUDIENTES POR ALUMNO
+async function consultarAcudientes(){
+    const alumnoId = alumnoConsulta.value;
+
+    const data = await request("/alumno-acudiente/alumno/" + alumnoId);
+
+    tablaRelacion.innerHTML = "";
+
+    data.forEach(r=>{
+        tablaRelacion.innerHTML += `
+        <tr>
+            <td>${r.acudiente.nombre} ${r.acudiente.apellido}</td>
+            <td>${r.parentesco}</td>
+        </tr>`;
+    });
+}
+
+// INIT
+window.onload = async ()=>{
+    await cargarDatos();
+    consultarAcudientes();
+};
+
+</script>
+
+</body>
+</html>

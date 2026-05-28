@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">   <title>Gescol - Titulares</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body >
+    <center>
+<nav class="navbar">
+    <div class="nav-left">
+        <img src="logo.png" alt="Logo">
+        <span>GESCOL</span>
+    </div>
+    
+    <div class="nav-right">
+        <a href="index.html">Principal</a>
+        <a href="asistencia.html">Asistencia</a>
+        <a href="salida.html">Salidas</a>
+        <a href="relacion.html">Acudientes</a>
+        <a href="titulares.html">Titulares</a>
+        <a href="transporte.html">Transporte</a>
+        <a href="rutas.html">Rutas</a>
+        <a href="grados.html">Grados</a>
+        <a href="alumnos.html">Alumnos</a>
+    </div>
+</nav>
+
+<h2>Titulares</h2>
+
+<div class="grid">
+<div class="card">
+<input id="tcedula" placeholder="Cédula">
+<input id="tnombre" placeholder="Nombre">
+<input id="tapellido" placeholder="Apellido">
+
+<select id="ttipo">
+<option value="DOCENTE">DOCENTE</option>
+<option value="COORDINADOR">COORDINADOR</option>
+</select>
+
+<input id="tarea" placeholder="Área">
+<input id="tpass" placeholder="Contraseña">
+
+<button id="btnGuardarTitular" onclick="guardarTitular()">Guardar</button>
+<button id="btnCancelarTitular" onclick="cancelarEdicionTitular()" style="display:none">Cancelar</button>
+</div>
+
+<div class="card">
+<table>
+<thead>
+<tr>
+<th>Cédula</th><th>Nombre</th><th>Apellido</th><th>Tipo</th><th>Área</th><th>Acciones</th>
+</tr>
+</thead>
+<tbody id="tablaTitulares"></tbody>
+</table>
+</div>
+</div>
+</center>
+<script>
+
+const API = "http://localhost:8080/api";
+
+async function request(url, method="GET", data=null){
+    const opt = { method, headers: {"Content-Type":"application/json"} };
+    if(data) opt.body = JSON.stringify(data);
+    const res = await fetch(API+url, opt);
+    const ct = res.headers.get("content-type") || "";
+    let body;
+    if (ct.includes("application/json")) body = await res.json();
+    else body = await res.text();
+    if (!res.ok) throw new Error(body);
+    return body;
+}
+
+let editTitularId = null;
+
+function limpiarFormTitular(){
+    document.getElementById("tcedula").value = "";
+    document.getElementById("tnombre").value = "";
+    document.getElementById("tapellido").value = "";
+    document.getElementById("ttipo").value = "DOCENTE";
+    document.getElementById("tarea").value = "";
+    document.getElementById("tpass").value = "";
+    editTitularId = null;
+    document.getElementById("btnGuardarTitular").textContent = "Guardar";
+    document.getElementById("btnCancelarTitular").style.display = "none";
+}
+
+function cancelarEdicionTitular(){ limpiarFormTitular(); }
+
+async function editarTitular(id){
+    editTitularId = id;
+    const t = await request("/titulares/" + id);
+    document.getElementById("tcedula").value = t.numeroCedula;
+    document.getElementById("tnombre").value = t.nombre;
+    document.getElementById("tapellido").value = t.apellido;
+    document.getElementById("ttipo").value = t.tipo;
+    document.getElementById("tarea").value = t.area;
+    document.getElementById("tpass").value = t.password;
+    document.getElementById("btnGuardarTitular").textContent = "Actualizar";
+    document.getElementById("btnCancelarTitular").style.display = "";
+}
+
+async function guardarTitular(){
+    try {
+        const body = {
+            numeroCedula: tcedula.value,
+            nombre: tnombre.value,
+            apellido: tapellido.value,
+            tipo: ttipo.value,
+            area: tarea.value,
+            password: tpass.value
+        };
+
+        if (editTitularId) {
+            await request("/titulares/" + editTitularId, "PUT", body);
+        } else {
+            await request("/titulares", "POST", body);
+        }
+
+        listarTitulares();
+        limpiarFormTitular();
+    } catch(e) {
+        alert("Error: " + e.message);
+    }
+}
+
+async function listarTitulares(){
+    let data = await request("/titulares");
+    tablaTitulares.innerHTML="";
+
+    data.forEach(t=>{
+        tablaTitulares.innerHTML+=`
+        <tr>
+            <td>${t.numeroCedula}</td>
+            <td>${t.nombre}</td>
+            <td>${t.apellido}</td>
+            <td>${t.tipo}</td>
+            <td>${t.area}</td>
+            <td>
+                <button class="btn-edit" onclick="editarTitular(${t.id})">Editar</button>
+                <button class="btn-delete" onclick="delTitular(${t.id})">X</button>
+            </td>
+        </tr>`;
+    });
+}
+
+async function delTitular(id){
+    try {
+        await request("/titulares/"+id,"DELETE");
+        listarTitulares();
+    } catch(e) {
+        alert("Error: " + e.message);
+    }
+}
+
+window.onload = ()=>{
+    listarTitulares();
+}
+
+</script>
+
+</body>
+</html>

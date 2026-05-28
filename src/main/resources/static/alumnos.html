@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">   <title>Gescol - Alumnos</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body >
+    <center>
+<nav class="navbar">
+    <div class="nav-left">
+        <img src="logo.png" alt="Logo">
+        <span>GESCOL</span>
+    </div>
+    
+    <div class="nav-right">
+        <a href="index.html">Principal</a>
+        <a href="asistencia.html">Asistencia</a>
+        <a href="salida.html">Salidas</a>
+        <a href="relacion.html">Acudientes</a>
+        <a href="titulares.html">Titulares</a>
+        <a href="transporte.html">Transporte</a>
+        <a href="rutas.html">Rutas</a>
+        <a href="grados.html">Grados</a>
+        <a href="alumnos.html">Alumnos</a>
+    </div>
+</nav>
+
+<h2>Alumnos</h2>
+
+<div class="grid">
+<div class="card">
+<input id="anombre" placeholder="Nombre">
+<input id="aapellido" placeholder="Apellido">
+<select id="agrado"><option value="">Seleccione grado</option></select>
+
+<div class="toggle-group">
+    <div class="toggle-row">
+        <span class="toggle-label">Ingreso:</span>
+        <label><input type="radio" name="ingreso" value="acudiente" checked onchange="toggleRuta('ingreso')"> Acudiente</label>
+        <label><input type="radio" name="ingreso" value="ruta" onchange="toggleRuta('ingreso')"> Ruta</label>
+        <select id="rutaIngreso" class="ruta-select" style="display:none"></select>
+    </div>
+    <div class="toggle-row">
+        <span class="toggle-label">Salida:</span>
+        <label><input type="radio" name="salida" value="acudiente" checked onchange="toggleRuta('salida')"> Acudiente</label>
+        <label><input type="radio" name="salida" value="ruta" onchange="toggleRuta('salida')"> Ruta</label>
+        <select id="rutaSalida" class="ruta-select" style="display:none"></select>
+    </div>
+</div>
+
+<select id="aacudiente"><option value="">Sin acudiente</option></select>
+<input id="aparentesco" placeholder="Parentesco (Madre, Padre...)">
+
+<button id="btnGuardarAlumno" onclick="guardarAlumno()">Guardar</button>
+<button id="btnCancelarAlumno" onclick="cancelarEdicion()" style="display:none">Cancelar</button>
+</div>
+
+<div class="card">
+<table>
+<thead>
+<tr>
+<th>Código</th><th>Nombre</th><th>Apellido</th><th>Grado</th><th>Ruta Ingreso</th><th>Ruta Salida</th><th>Acciones</th>
+</tr>
+</thead>
+<tbody id="tablaAlumnos"></tbody>
+</table>
+</div>
+</div>
+</div>
+
+<hr>
+
+<h2>Importar alumnos desde CSV</h2>
+
+<div class="grid">
+<div class="card">
+    <button class="btn-download" onclick="descargarPlantilla()">Descargar plantilla CSV</button>
+    <p style="margin: 10px 0; font-size: 14px; color: #555;">
+        Sube un archivo CSV con las columnas: nombre, apellido, grado, ingreso, ruta_ingreso, salida, ruta_salida, acudiente_documento, acudiente_nombre, acudiente_apellido, acudiente_telefono, parentesco
+    </p>
+    <input type="file" id="csvFile" accept=".csv">
+    <button onclick="importarCSV()">Importar CSV</button>
+    <div id="resultadoImportacion" style="margin-top:15px;"></div>
+</div>
+</div>
+</center>
+<script>
+
+const API = "http://localhost:8080/api";
+
+async function request(url, method="GET", data=null){
+    const opt = { method, headers: {"Content-Type":"application/json"} };
+    if(data) opt.body = JSON.stringify(data);
+    const res = await fetch(API+url, opt);
+    const ct = res.headers.get("content-type") || "";
+    let body;
+    if (ct.includes("application/json")) body = await res.json();
+    else body = await res.text();
+    if (!res.ok) throw new Error(body);
+    return body;
+}
+
+// ================= ALUMNOS =================
+let editAlumnoId = null;
+
+async function limpiarFormAlumno(){
+    document.getElementById("anombre").value = "";
+    document.getElementById("aapellido").value = "";
+    document.getElementById("agrado").value = "";
+    document.getElementById("aacudiente").value = "";
+    document.getElementById("aparentesco").value = "";
+    document.querySelector('input[name="ingreso"][value="acudiente"]').checked = true;
+    document.querySelector('input[name="salida"][value="acudiente"]').checked = true;
+    document.getElementById("rutaIngreso").style.display = "none";
+    document.getElementById("rutaSalida").style.display = "none";
+    document.getElementById("rutaIngreso").value = "";
+    document.getElementById("rutaSalida").value = "";
+    editAlumnoId = null;
+    document.getElementById("btnGuardarAlumno").textContent = "Guardar";
+    document.getElementById("btnCancelarAlumno").style.display = "none";
+}
+
+function cancelarEdicion(){
+    limpiarFormAlumno();
+}
+
+async function editarAlumno(id){
+    editAlumnoId = id;
+    const alumno = await request("/alumnos/" + id);
+
+    document.getElementById("anombre").value = alumno.nombre;
+    document.getElementById("aapellido").value = alumno.apellido;
+    document.getElementById("agrado").value = alumno.grado ? alumno.grado.id : "";
+
+    if (alumno.rutaIngreso) {
+        document.querySelector('input[name="ingreso"][value="ruta"]').checked = true;
+        document.getElementById("rutaIngreso").value = alumno.rutaIngreso.id;
+        document.getElementById("rutaIngreso").style.display = "";
+    } else {
+        document.querySelector('input[name="ingreso"][value="acudiente"]').checked = true;
+        document.getElementById("rutaIngreso").style.display = "none";
+    }
+
+    if (alumno.rutaSalida) {
+        document.querySelector('input[name="salida"][value="ruta"]').checked = true;
+        document.getElementById("rutaSalida").value = alumno.rutaSalida.id;
+        document.getElementById("rutaSalida").style.display = "";
+    } else {
+        document.querySelector('input[name="salida"][value="acudiente"]').checked = true;
+        document.getElementById("rutaSalida").style.display = "none";
+    }
+
+    const relaciones = await request("/alumno-acudiente/alumno/" + id);
+    if (relaciones.length > 0) {
+        document.getElementById("aacudiente").value = relaciones[0].acudiente.id;
+        document.getElementById("aparentesco").value = relaciones[0].parentesco;
+    }
+
+    document.getElementById("btnGuardarAlumno").textContent = "Actualizar";
+    document.getElementById("btnCancelarAlumno").style.display = "";
+}
+
+async function guardarAlumno(){
+    try {
+        const ingresoRuta = document.querySelector('input[name="ingreso"]:checked').value === "ruta";
+        const salidaRuta = document.querySelector('input[name="salida"]:checked').value === "ruta";
+        const rutaIngresoEl = document.getElementById("rutaIngreso");
+        const rutaSalidaEl = document.getElementById("rutaSalida");
+
+        const gradoId = document.getElementById("agrado").value;
+        if (!gradoId) { alert("Seleccione un grado"); return; }
+
+        const body = {
+            nombre: document.getElementById("anombre").value,
+            apellido: document.getElementById("aapellido").value,
+            grado: {id: parseInt(gradoId)},
+            rutaIngreso: ingresoRuta && rutaIngresoEl.value ? {id: parseInt(rutaIngresoEl.value)} : null,
+            ingresoConAcudiente: !ingresoRuta,
+            rutaSalida: salidaRuta && rutaSalidaEl.value ? {id: parseInt(rutaSalidaEl.value)} : null,
+            salidaConAcudiente: !salidaRuta
+        };
+
+        let alumnoGuardado;
+        if (editAlumnoId) {
+            alumnoGuardado = await request("/alumnos/" + editAlumnoId, "PUT", body);
+        } else {
+            alumnoGuardado = await request("/alumnos", "POST", body);
+        }
+
+        const acudienteEl = document.getElementById("aacudiente");
+        const parentescoEl = document.getElementById("aparentesco");
+
+        if (editAlumnoId) {
+            const relaciones = await request("/alumno-acudiente/alumno/" + editAlumnoId);
+            for (const r of relaciones) {
+                await request("/alumno-acudiente/" + r.id, "DELETE");
+            }
+        }
+
+        if (acudienteEl.value) {
+            await request("/alumno-acudiente", "POST", {
+                alumnoId: editAlumnoId || alumnoGuardado.id,
+                acudienteId: parseInt(acudienteEl.value),
+                parentesco: parentescoEl.value || "Acudiente"
+            });
+        }
+
+        listarAlumnos();
+        limpiarFormAlumno();
+    } catch(e) {
+        alert("Error: " + e.message);
+    }
+}
+
+async function cargarRutasSelect(){
+    const rutas = await request("/rutas");
+    ["rutaIngreso","rutaSalida"].forEach(id => {
+        const sel = document.getElementById(id);
+        sel.innerHTML = '<option value="">Seleccione ruta</option>';
+        rutas.forEach(r => {
+            sel.innerHTML += `<option value="${r.id}">${r.numeroRuta} - ${r.placaVehiculo}</option>`;
+        });
+    });
+}
+
+async function cargarAcudientesSelect(){
+    const acudientes = await request("/acudientes");
+    const sel = document.getElementById("aacudiente");
+    sel.innerHTML = '<option value="">Sin acudiente</option>';
+    acudientes.forEach(a => {
+        sel.innerHTML += `<option value="${a.id}">${a.nombre} ${a.apellido}</option>`;
+    });
+}
+
+async function cargarGradosSelect(){
+    const grados = await request("/grados");
+    const sel = document.getElementById("agrado");
+    sel.innerHTML = '<option value="">Seleccione grado</option>';
+    grados.forEach(g => {
+        sel.innerHTML += `<option value="${g.id}">${g.nombre}</option>`;
+    });
+}
+
+function toggleRuta(tipo){
+    const el = document.getElementById("ruta" + tipo.charAt(0).toUpperCase() + tipo.slice(1));
+    const esRuta = document.querySelector(`input[name="${tipo}"]:checked`).value === "ruta";
+    el.style.display = esRuta ? "" : "none";
+}
+
+async function listarAlumnos(){
+    let data = await request("/alumnos");
+    tablaAlumnos.innerHTML="";
+
+    data.forEach(a=>{
+        tablaAlumnos.innerHTML+=`
+        <tr>
+            <td>${a.codigoEstudiantil}</td>
+            <td>${a.nombre}</td>
+            <td>${a.apellido}</td>
+            <td>${a.grado ? a.grado.nombre : "-"}</td>
+            <td>${a.rutaIngreso ? a.rutaIngreso.numeroRuta : "-"}</td>
+            <td>${a.rutaSalida ? a.rutaSalida.numeroRuta : "-"}</td>
+            <td>
+                <button class="btn-edit" onclick="editarAlumno(${a.id})">Editar</button>
+                <button class="btn-delete" onclick="delAlumno(${a.id})">X</button>
+            </td>
+        </tr>`;
+    });
+}
+
+async function delAlumno(id){
+    try {
+        await request("/alumnos/"+id,"DELETE");
+        listarAlumnos();
+    } catch(e) {
+        alert("Error: " + e.message);
+    }
+}
+
+// ================= CSV IMPORT =================
+function descargarPlantilla() {
+    const encabezados = "nombre,apellido,grado,ingreso,ruta_ingreso,salida,ruta_salida,acudiente_documento,acudiente_nombre,acudiente_apellido,acudiente_telefono,parentesco";
+    const ejemplo = "Juan,Perez,Primero,acudiente,,acudiente,,12345,Maria,Perez,3001234567,Madre\nMaria,Garcia,Segundo,acudiente,,acudiente,,67890,Carlos,Garcia,3007654321,Padre";
+    const bom = "\uFEFF";
+    const blob = new Blob([bom + encabezados + "\n" + ejemplo], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "plantilla_alumnos.csv";
+    a.click();
+    URL.revokeObjectURL(a.href);
+}
+
+async function importarCSV() {
+    const fileInput = document.getElementById("csvFile");
+    if (!fileInput.files.length) { alert("Seleccione un archivo CSV"); return; }
+
+    const file = fileInput.files[0];
+    let texto = await file.text();
+    texto = texto.replace(/^\ufeff/, "").replace(/^u\{FEFF\}/i, "");
+    const lineas = texto.split("\n").filter(l => l.trim());
+
+    if (lineas.length < 2) { alert("El archivo debe tener encabezados y al menos una fila de datos"); return; }
+
+    const encabezados = lineas[0].split(",").map(h => h.trim().toLowerCase());
+    const filas = [];
+
+    for (let i = 1; i < lineas.length; i++) {
+        const valores = lineas[i].split(",").map(v => v.trim());
+        const fila = {};
+        encabezados.forEach((h, idx) => { fila[h] = valores[idx] || ""; });
+        filas.push(fila);
+    }
+
+    document.getElementById("resultadoImportacion").innerHTML = "Importando...";
+
+    try {
+        const res = await request("/alumnos/importar", "POST", filas);
+
+        let html = `
+        <div style="background:#f0f9f0;padding:12px;border-radius:8px;margin-top:10px;">
+            <strong>Resultado:</strong> ${res.procesados} importados, ${res.errores} errores (${res.total} total)
+        </div>
+        <table style="width:100%;margin-top:10px;font-size:13px;">
+        <thead><tr><th>Fila</th><th>Nombre</th><th>Apellido</th><th>Estado</th><th>Mensaje</th></tr></thead>
+        <tbody>`;
+
+        res.detalles.forEach(d => {
+            const color = d.estado === "ok" ? "#d4edda" : "#f8d7da";
+            const codigo = d.codigo ? ` (${d.codigo})` : "";
+            html += `<tr style="background:${color}">
+                <td>${d.fila}</td>
+                <td>${d.nombre}</td>
+                <td>${d.apellido}</td>
+                <td>${d.estado === "ok" ? "OK" : "ERROR"}</td>
+                <td>${d.mensaje || "Importado" + codigo}</td>
+            </tr>`;
+        });
+
+        html += "</tbody></table>";
+        document.getElementById("resultadoImportacion").innerHTML = html;
+        listarAlumnos();
+    } catch (e) {
+        document.getElementById("resultadoImportacion").innerHTML =
+            `<div style="background:#f8d7da;padding:12px;border-radius:8px;">Error: ${e.message}</div>`;
+    }
+}
+
+window.onload = ()=>{
+    listarAlumnos();
+    cargarRutasSelect();
+    cargarGradosSelect();
+    cargarAcudientesSelect();
+}
+
+</script>
+
+</body>
+</html>

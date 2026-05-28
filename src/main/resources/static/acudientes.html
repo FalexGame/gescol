@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">   <title>Gescol - Acudientes</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body >
+    <center>
+<nav class="navbar">
+    <div class="nav-left">
+        <img src="logo.png" alt="Logo">
+        <span>GESCOL</span>
+    </div>
+    
+    <div class="nav-right">
+        <a href="index.html">Principal</a>
+        <a href="asistencia.html">Asistencia</a>
+        <a href="salida.html">Salidas</a>
+        <a href="relacion.html">Acudientes</a>
+        <a href="titulares.html">Titulares</a>
+        <a href="transporte.html">Transporte</a>
+        <a href="rutas.html">Rutas</a>
+        <a href="grados.html">Grados</a>
+        <a href="alumnos.html">Alumnos</a>
+    </div>
+</nav>
+
+<h2>Acudientes</h2>
+
+<div class="grid">
+<div class="card">
+<input id="cedula" placeholder="Documento">
+<input id="nombre" placeholder="Nombre">
+<input id="apellido" placeholder="Apellido">
+<input id="telefono" placeholder="Teléfono">
+
+<button id="btnGuardarAcudiente" onclick="guardarAcudiente()">Guardar</button>
+<button id="btnCancelarAcudiente" onclick="cancelarEdicionAcudiente()" style="display:none">Cancelar</button>
+</div>
+
+<div class="card">
+<table>
+<thead>
+<tr>
+<th>Cédula</th><th>Nombre</th><th>Apellido</th><th>Teléfono</th><th>Acciones</th>
+</tr>
+</thead>
+<tbody id="tablaAcudientes"></tbody>
+</table>
+</div>
+</div>
+</center>
+<script>
+
+const API = "http://localhost:8080/api";
+
+async function request(url, method="GET", data=null){
+    const opt = { method, headers: {"Content-Type":"application/json"} };
+    if(data) opt.body = JSON.stringify(data);
+    const res = await fetch(API+url, opt);
+    const ct = res.headers.get("content-type") || "";
+    let body;
+    if (ct.includes("application/json")) body = await res.json();
+    else body = await res.text();
+    if (!res.ok) throw new Error(body);
+    return body;
+}
+
+let editAcudienteId = null;
+
+function limpiarFormAcudiente(){
+    document.getElementById("cedula").value = "";
+    document.getElementById("nombre").value = "";
+    document.getElementById("apellido").value = "";
+    document.getElementById("telefono").value = "";
+    editAcudienteId = null;
+    document.getElementById("btnGuardarAcudiente").textContent = "Guardar";
+    document.getElementById("btnCancelarAcudiente").style.display = "none";
+}
+
+function cancelarEdicionAcudiente(){ limpiarFormAcudiente(); }
+
+async function editarAcudiente(id){
+    editAcudienteId = id;
+    const a = await request("/acudientes/" + id);
+    document.getElementById("cedula").value = a.numeroCedula;
+    document.getElementById("nombre").value = a.nombre;
+    document.getElementById("apellido").value = a.apellido;
+    document.getElementById("telefono").value = a.telefono;
+    document.getElementById("btnGuardarAcudiente").textContent = "Actualizar";
+    document.getElementById("btnCancelarAcudiente").style.display = "";
+}
+
+async function guardarAcudiente(){
+    try {
+        const body = {
+            numeroCedula: cedula.value,
+            nombre: nombre.value,
+            apellido: apellido.value,
+            telefono: telefono.value
+        };
+
+        if (editAcudienteId) {
+            await request("/acudientes/" + editAcudienteId, "PUT", body);
+        } else {
+            await request("/acudientes", "POST", body);
+        }
+
+        listarAcudientes();
+        limpiarFormAcudiente();
+    } catch(e) {
+        alert("Error: " + e.message);
+    }
+}
+
+async function listarAcudientes(){
+    let data = await request("/acudientes");
+    tablaAcudientes.innerHTML="";
+
+    data.forEach(a=>{
+        tablaAcudientes.innerHTML+=`
+        <tr>
+            <td>${a.numeroCedula}</td>
+            <td>${a.nombre}</td>
+            <td>${a.apellido}</td>
+            <td>${a.telefono}</td>
+            <td>
+                <button class="btn-edit" onclick="editarAcudiente(${a.id})">Editar</button>
+                <button class="btn-delete" onclick="delAcudiente(${a.id})">X</button>
+            </td>
+        </tr>`;
+    });
+}
+
+async function delAcudiente(id){
+    try {
+        await request("/acudientes/"+id,"DELETE");
+        listarAcudientes();
+    } catch(e) {
+        alert("Error: " + e.message);
+    }
+}
+
+window.onload = ()=>{
+    listarAcudientes();
+}
+
+</script>
+
+</body>
+</html>

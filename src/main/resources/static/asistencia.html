@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gescol - Asistencia</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<nav class="navbar">
+    <div class="nav-left">
+        <img src="logo.png" alt="Logo">
+        <span>GESCOL</span>
+    </div>
+    
+    <div class="nav-right">
+        <a href="index.html">Principal</a>
+        <a href="asistencia.html">Asistencia</a>
+        <a href="salida.html">Salidas</a>
+        <a href="relacion.html">Acudientes</a>
+        <a href="titulares.html">Titulares</a>
+        <a href="transporte.html">Transporte</a>
+        <a href="rutas.html">Rutas</a>
+        <a href="grados.html">Grados</a>
+        <a href="alumnos.html">Alumnos</a>
+    </div>
+</nav>
+
+<center>
+
+<h2>Registro de Asistencia</h2>
+
+<label>Grado</label>
+<select id="grado"></select>
+
+<button onclick="cargarAlumnos()">Cargar</button>
+
+<div id="formularioAsistencia" style="display:none;">
+    <table>
+    <thead>
+    <tr>
+        <th>Alumno</th>
+        <th>Estado</th>
+    </tr>
+    </thead>
+    <tbody id="tabla"></tbody>
+    </table>
+
+    <button onclick="guardarAsistencia()">Guardar Todo</button>
+</div>
+
+<h3 style="margin-top:30px;">Asistencia registrada hoy</h3>
+
+<div>
+    <label>Grado</label>
+    <select id="filtroGrado"></select>
+    <button onclick="cargarAsistenciaRegistrada()">Ver</button>
+</div>
+
+<table>
+<thead>
+<tr>
+    <th>Alumno</th>
+    <th>Grado</th>
+    <th>Fecha</th>
+    <th>Estado</th>
+    <th>Acciones</th>
+</tr>
+</thead>
+<tbody id="tablaAsistencia"></tbody>
+</table>
+
+</center>
+
+<script>
+
+const API = "http://localhost:8080/api";
+let lista = [];
+let editAsistenciaId = null;
+
+async function request(url, method="GET", data=null){
+    const opt = { method, headers: {"Content-Type":"application/json"} };
+    if(data) opt.body = JSON.stringify(data);
+    const res = await fetch(API+url, opt);
+    const ct = res.headers.get("content-type") || "";
+    let body;
+    if (ct.includes("application/json")) body = await res.json();
+    else body = await res.text();
+    if (!res.ok) throw new Error(body);
+    return body;
+}
+
+async function cargarGrados(){
+    const grados = await request("/grados");
+    ["grado", "filtroGrado"].forEach(id => {
+        const sel = document.getElementById(id);
+        sel.innerHTML = "<option value=''>Seleccione grado</option>";
+        grados.forEach(g => {
+            sel.innerHTML += `<option value="${g.id}">${g.nombre}</option>`;
+        });
+    });
+}
+
+async function cargarAlumnos(){
+    const g = document.getElementById("grado").value;
+    if(!g){ alert("Seleccione un grado"); return; }
+
+    lista = await request("/alumnos");
+    const tbody = document.getElementById("tabla");
+    tbody.innerHTML = "";
+
+    lista
+    .filter(a => a.grado && a.grado.id == g)
+    .forEach(a => {
+        tbody.innerHTML += `
+        <tr>
+            <td>${a.nombre} ${a.apellido}</td>
+            <td>
+                <select id="estado_${a.id}">
+                    <option value="ASISTIO">ASISTIO</option>
+                    <option value="AUSENTE">AUSENTE</option>
+                    <option value="TARDE">TARDE</option>
+                </select>
+            </td>
+        </tr>`;
+    });
+
+    document.getElementById("formularioAsistencia").style.display = "";
+}
+
+async function guardarAsistencia(){
+    const g = document.getElementById("grado").value;
+    if(!g){ alert("Seleccione un grado"); return; }
+
+    for (let a of lista){
+        if(!a.grado || a.grado.id != g) continue;
+        const estado = document.getElementById("estado_"+a.id).value;
+        try {
+            await request("/asistencia","POST",{
+                alumno: { id: a.id },
+                fecha: new Date().toISOString().split("T")[0],
+                estado: estado,
+                salidaAnticipada: false
+            });
+        } catch(e) {
+            // si ya existe, ignoramos (duplicado)
+        }
+    }
+
+    alert("Asistencia guardada correctamente");
+    document.getElementById("filtroGrado").value = g;
+    await cargarAsistenciaRegistrada();
+}
+
+async function cargarAsistenciaRegistrada(){
+    const g = document.getElementById("filtroGrado").value;
+    if(!g){ alert("Seleccione un grado"); return; }
+
+    const hoy = new Date().toISOString().split("T")[0];
+    const todas = await request("/asistencia/fecha/" + hoy);
+    const alumnos = await request("/alumnos");
+
+    const alumnosGrado = alumnos.filter(a => a.grado && a.grado.id == g);
+    const idsGrado = new Set(alumnosGrado.map(a => a.id));
+    const filtradas = todas.filter(r => idsGrado.has(r.alumno.id));
+
+    const tbody = document.getElementById("tablaAsistencia");
+    tbody.innerHTML = "";
+
+    if (filtradas.length === 0) {
+        tbody.innerHTML = "<tr><td colspan='5'>No hay asistencia registrada hoy para este grado</td></tr>";
+        return;
+    }
+
+    filtradas.forEach(r => {
+        const editando = editAsistenciaId === r.id;
+        tbody.innerHTML += `
+        <tr>
+            <td>${r.alumno.nombre} ${r.alumno.apellido}</td>
+            <td>${r.alumno.grado ? r.alumno.grado.nombre : "-"}</td>
+            <td>${r.fecha}</td>
+            <td>
+                ${editando
+                    ? `<select id="editEstado_${r.id}">
+                        <option value="ASISTIO" ${r.estado === "ASISTIO" ? "selected" : ""}>ASISTIO</option>
+                        <option value="AUSENTE" ${r.estado === "AUSENTE" ? "selected" : ""}>AUSENTE</option>
+                        <option value="TARDE" ${r.estado === "TARDE" ? "selected" : ""}>TARDE</option>
+                       </select>`
+                    : `<span class="estado-${r.estado.toLowerCase()}">${r.estado}</span>`}
+            </td>
+            <td>
+                ${editando
+                    ? `<button onclick="guardarEdicion(${r.id})">Guardar</button>
+                       <button onclick="cancelarEdicion()">Cancelar</button>`
+                    : `<button class="btn-edit" onclick="editarAsistencia(${r.id})">Editar</button>`}
+            </td>
+        </tr>`;
+    });
+}
+
+function editarAsistencia(id){
+    editAsistenciaId = id;
+    cargarAsistenciaRegistrada();
+}
+
+function cancelarEdicion(){
+    editAsistenciaId = null;
+    cargarAsistenciaRegistrada();
+}
+
+async function guardarEdicion(id){
+    try {
+        const nuevoEstado = document.getElementById("editEstado_" + id).value;
+        await request("/asistencia/" + id, "PUT", { estado: nuevoEstado });
+        editAsistenciaId = null;
+        cargarAsistenciaRegistrada();
+    } catch(e) {
+        alert("Error: " + e.message);
+    }
+}
+
+window.onload = async ()=>{
+    await cargarGrados();
+};
+
+</script>
+
+</body>
+</html>
