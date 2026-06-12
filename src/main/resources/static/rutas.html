@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
@@ -66,12 +66,12 @@
 <div class="card" id="tablaContainer" style="display:none;">
     <h3 id="tituloLista"></h3>
     <div class="entrega-info" id="entregaInfo" style="display:none;">
-        <span class="badge-asistio">Asistió</span>
+        <span class="badge-asistio">AsistiÃ³</span>
         <span class="badge-tarde">Tarde</span>
-        <span class="badge-no-asistio">No Asistió</span>
+        <span class="badge-no-asistio">No AsistiÃ³</span>
         <span class="badge-salida-anticipada">Salida Anticipada</span>
         <span class="badge-sin-registro">Sin registro</span>
-        <span class="badge-distraido">Jugando / Distraído</span>
+        <span class="badge-distraido">Jugando / DistraÃ­do</span>
     </div>
     <div id="ingresoHoraContainer" style="margin-bottom:8px;display:none;">
         <label>Hora de llegada:</label>
@@ -80,11 +80,11 @@
     <table>
     <thead>
     <tr id="tablaHeaders">
-        <th>Código</th>
+        <th>CÃ³digo</th>
         <th>Nombre</th>
         <th>Apellido</th>
         <th>Grado</th>
-        <th>¿Llegó?</th>
+        <th>Â¿LlegÃ³?</th>
     </tr>
     </thead>
     <tbody id="tablaAlumnos"></tbody>
@@ -98,7 +98,7 @@
 
 <script>
 
-const API = "http://localhost:8080/api";
+const API = "/api";
 
 async function request(url, method="GET", data=null){
     const opt = { method, headers: {"Content-Type":"application/json"} };
@@ -126,9 +126,9 @@ function onTipoChange(){
 }
 
 function badgeEstado(estado, salidaAnticipada) {
-    if (estado === "ASISTIO") return '<span class="badge-asistio">Asistió</span>';
+    if (estado === "ASISTIO") return '<span class="badge-asistio">AsistiÃ³</span>';
     if (estado === "TARDE")   return '<span class="badge-tarde">Tarde</span>';
-    if (estado === "AUSENTE") return '<span class="badge-no-asistio">No Asistió</span>';
+    if (estado === "AUSENTE") return '<span class="badge-no-asistio">No AsistiÃ³</span>';
     return '<span class="badge-sin-registro">Sin registro</span>';
 }
 
@@ -146,8 +146,8 @@ async function cargarRuta(){
 
     document.getElementById("tablaHeaders").innerHTML =
         tipo === "ENTREGA"
-            ? "<th>Código</th><th>Nombre</th><th>Apellido</th><th>Grado</th><th>Estado</th><th>¿Recogido?</th>"
-            : "<th>Código</th><th>Nombre</th><th>Apellido</th><th>Grado</th><th>¿Llegó?</th>";
+            ? "<th>CÃ³digo</th><th>Nombre</th><th>Apellido</th><th>Grado</th><th>Estado</th><th>Â¿Recogido?</th>"
+            : "<th>CÃ³digo</th><th>Nombre</th><th>Apellido</th><th>Grado</th><th>Â¿LlegÃ³?</th>";
 
     document.getElementById("ingresoHoraContainer").style.display = tipo === "INGRESO" ? "" : "none";
 
@@ -193,7 +193,7 @@ async function cargarRuta(){
             if (!puedeRecoger) {
                 chkHtml = `<span style="color:#999;">N/A</span>`;
             } else if (llego === false) {
-                chkHtml = `<span class="badge-distraido">Jugando / Distraído</span> <input type="checkbox" id="chk_${a.alumnoId}" ${chkChecked ? "checked" : ""}>`;
+                chkHtml = `<span class="badge-distraido">Jugando / DistraÃ­do</span> <input type="checkbox" id="chk_${a.alumnoId}" ${chkChecked ? "checked" : ""}>`;
             } else {
                 chkHtml = `<input type="checkbox" id="chk_${a.alumnoId}" ${chkChecked ? "checked" : ""}>`;
             }
@@ -212,7 +212,7 @@ async function cargarRuta(){
         document.getElementById("tablaContainer").style.display = "";
         document.getElementById("resumen").style.display = "none";
 
-        // Pequeño resumen en el título
+        // PequeÃ±o resumen en el tÃ­tulo
         document.getElementById("tituloLista").textContent =
             `Entrega - ${ruta.numeroRuta} (${data.length} alumnos | Asistieron: ${asistieron} | No asistieron: ${noAsistieron} | Salida anticipada: ${salidaAnticipada} | Sin registro: ${sinRegistro})`;
 
@@ -309,7 +309,7 @@ async function guardarControl(){
         document.getElementById("resumen").style.display = "";
         document.getElementById("resumen").innerHTML =
             `<div style="background:#d4edda;padding:12px;border-radius:8px;">
-                ✅ ${res.guardados} registros guardados correctamente
+                âœ… ${res.guardados} registros guardados correctamente
             </div>`;
         cargarRuta();
     } catch(e) {

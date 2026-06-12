@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
@@ -26,14 +26,14 @@
     </div>
 </nav>
 
-<h2>Panel de Gestión</h2>
+<h2>Panel de GestiÃ³n</h2>
 
 <!-- ================= TITULARES ================= -->
 <h2 class="section-title">Titulares</h2>
 
 <div class="grid">
 <div class="card">
-<input id="tcedula" placeholder="Cédula">
+<input id="tcedula" placeholder="CÃ©dula">
 <input id="tnombre" placeholder="Nombre">
 <input id="tapellido" placeholder="Apellido">
 
@@ -42,8 +42,8 @@
 <option value="COORDINADOR">COORDINADOR</option>
 </select>
 
-<input id="tarea" placeholder="Área">
-<input id="tpass" placeholder="Contraseña">
+<input id="tarea" placeholder="Ãrea">
+<input id="tpass" placeholder="ContraseÃ±a">
 
 <button id="btnGuardarTitular" onclick="guardarTitular()">Guardar</button>
 <button id="btnCancelarTitular" onclick="cancelarEdicionTitular()" style="display:none">Cancelar</button>
@@ -53,7 +53,7 @@
 <table>
 <thead>
 <tr>
-<th>Cédula</th><th>Nombre</th><th>Apellido</th><th>Tipo</th><th>Área</th><th>Acciones</th>
+<th>CÃ©dula</th><th>Nombre</th><th>Apellido</th><th>Tipo</th><th>Ãrea</th><th>Acciones</th>
 </tr>
 </thead>
 <tbody id="tablaTitulares"></tbody>
@@ -71,7 +71,7 @@
 <input id="cedula" placeholder="Documento">
 <input id="nombre" placeholder="Nombre">
 <input id="apellido" placeholder="Apellido">
-<input id="telefono" placeholder="Teléfono">
+<input id="telefono" placeholder="TelÃ©fono">
 
 <button id="btnGuardarAcudiente" onclick="guardarAcudiente()">Guardar</button>
 <button id="btnCancelarAcudiente" onclick="cancelarEdicionAcudiente()" style="display:none">Cancelar</button>
@@ -81,7 +81,7 @@
 <table>
 <thead>
 <tr>
-<th>Cédula</th><th>Nombre</th><th>Apellido</th><th>Teléfono</th><th>Acciones</th>
+<th>CÃ©dula</th><th>Nombre</th><th>Apellido</th><th>TelÃ©fono</th><th>Acciones</th>
 </tr>
 </thead>
 <tbody id="tablaAcudientes"></tbody>
@@ -96,12 +96,12 @@
 
 <div class="grid">
 <div class="card">
-<input id="rnumero" placeholder="Número ruta">
+<input id="rnumero" placeholder="NÃºmero ruta">
 <input id="rplaca" placeholder="Placa">
 <input id="rconductor" placeholder="Conductor">
-<input id="rtel" placeholder="Teléfono">
+<input id="rtel" placeholder="TelÃ©fono">
 <input id="rmonitor" placeholder="Monitor">
-<input id="rtelmonitor" placeholder="Teléfono monitor">
+<input id="rtelmonitor" placeholder="TelÃ©fono monitor">
 
 <button id="btnGuardarRuta" onclick="guardarRuta()">Guardar</button>
 <button id="btnCancelarRuta" onclick="cancelarEdicionRuta()" style="display:none">Cancelar</button>
@@ -111,7 +111,7 @@
 <table>
 <thead>
 <tr>
-<th>Número</th><th>Placa</th><th>Conductor</th><th>Teléfono</th><th>Monitor</th><th>Tel Monitor</th><th>Acciones</th>
+<th>NÃºmero</th><th>Placa</th><th>Conductor</th><th>TelÃ©fono</th><th>Monitor</th><th>Tel Monitor</th><th>Acciones</th>
 </tr>
 </thead>
 <tbody id="tablaRutas"></tbody>
@@ -180,7 +180,7 @@
 <table>
 <thead>
 <tr>
-<th>Código</th><th>Nombre</th><th>Apellido</th><th>Grado</th><th>Ruta Ingreso</th><th>Ruta Salida</th><th>Acciones</th>
+<th>CÃ³digo</th><th>Nombre</th><th>Apellido</th><th>Grado</th><th>Ruta Ingreso</th><th>Ruta Salida</th><th>Acciones</th>
 </tr>
 </thead>
 <tbody id="tablaAlumnos"></tbody>
@@ -191,7 +191,7 @@
 <!-- ================= JS ================= -->
 <script>
 
-const API = "http://localhost:8080/api";
+const API = "/api";
 
 //  REQUEST BASE
 async function request(url, method="GET", data=null){
@@ -734,7 +734,7 @@ async function delAlumno(id){
     }
 }
 
-// 🔥 INIT
+// ðŸ”¥ INIT
 window.onload = ()=>{
     listarTitulares();
     listarAcudientes();

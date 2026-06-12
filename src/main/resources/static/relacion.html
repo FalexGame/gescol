@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
@@ -60,9 +60,9 @@
 
 <script>
 
-const API = "http://localhost:8080/api";
+const API = "/api";
 
-// 🔷 REQUEST
+// ðŸ”· REQUEST
 async function request(url, method="GET", data=null){
     const opt = { method, headers: {"Content-Type":"application/json"} };
     if(data) opt.body = JSON.stringify(data);
@@ -94,7 +94,7 @@ async function cargarDatos(){
     });
 }
 
-//  ASIGNAR RELACIÓN
+//  ASIGNAR RELACIÃ“N
 async function asignar(){
     await request("/alumno-acudiente","POST",{
         alumno: { id: alumnoSelect.value },
@@ -103,7 +103,7 @@ async function asignar(){
     });
 
     parentesco.value = "";
-    alert("Relación creada");
+    alert("RelaciÃ³n creada");
 
     consultarAcudientes();
 }

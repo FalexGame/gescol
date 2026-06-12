@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
@@ -60,7 +60,7 @@
 <table>
 <thead>
 <tr>
-<th>Código</th><th>Nombre</th><th>Apellido</th><th>Grado</th><th>Ruta Ingreso</th><th>Ruta Salida</th><th>Acciones</th>
+<th>CÃ³digo</th><th>Nombre</th><th>Apellido</th><th>Grado</th><th>Ruta Ingreso</th><th>Ruta Salida</th><th>Acciones</th>
 </tr>
 </thead>
 <tbody id="tablaAlumnos"></tbody>
@@ -87,7 +87,7 @@
 </center>
 <script>
 
-const API = "http://localhost:8080/api";
+const API = "/api";
 
 async function request(url, method="GET", data=null){
     const opt = { method, headers: {"Content-Type":"application/json"} };

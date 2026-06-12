@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
@@ -30,12 +30,12 @@
 
 <div class="grid">
 <div class="card">
-<input id="rnumero" placeholder="Número ruta">
+<input id="rnumero" placeholder="NÃºmero ruta">
 <input id="rplaca" placeholder="Placa">
 <input id="rconductor" placeholder="Conductor">
-<input id="rtel" placeholder="Teléfono">
+<input id="rtel" placeholder="TelÃ©fono">
 <input id="rmonitor" placeholder="Monitor">
-<input id="rtelmonitor" placeholder="Teléfono monitor">
+<input id="rtelmonitor" placeholder="TelÃ©fono monitor">
 
 <button id="btnGuardarRuta" onclick="guardarRuta()">Guardar</button>
 <button id="btnCancelarRuta" onclick="cancelarEdicionRuta()" style="display:none">Cancelar</button>
@@ -45,7 +45,7 @@
 <table>
 <thead>
 <tr>
-<th>Número</th><th>Placa</th><th>Conductor</th><th>Teléfono</th><th>Monitor</th><th>Tel Monitor</th><th>Acciones</th>
+<th>NÃºmero</th><th>Placa</th><th>Conductor</th><th>TelÃ©fono</th><th>Monitor</th><th>Tel Monitor</th><th>Acciones</th>
 </tr>
 </thead>
 <tbody id="tablaRutas"></tbody>
@@ -58,7 +58,7 @@
     <table>
     <thead>
     <tr>
-        <th>Código</th><th>Nombre</th><th>Apellido</th><th>Grado</th><th>Trayecto</th>
+        <th>CÃ³digo</th><th>Nombre</th><th>Apellido</th><th>Grado</th><th>Trayecto</th>
     </tr>
     </thead>
     <tbody id="tablaAlumnosRuta"></tbody>
@@ -67,7 +67,7 @@
 </center>
 <script>
 
-const API = "http://localhost:8080/api";
+const API = "/api";
 
 async function request(url, method="GET", data=null){
     const opt = { method, headers: {"Content-Type":"application/json"} };

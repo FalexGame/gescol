@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
@@ -30,7 +30,7 @@
 
 <div class="grid">
 <div class="card">
-<input id="tcedula" placeholder="Cédula">
+<input id="tcedula" placeholder="CÃ©dula">
 <input id="tnombre" placeholder="Nombre">
 <input id="tapellido" placeholder="Apellido">
 
@@ -39,8 +39,8 @@
 <option value="COORDINADOR">COORDINADOR</option>
 </select>
 
-<input id="tarea" placeholder="Área">
-<input id="tpass" placeholder="Contraseña">
+<input id="tarea" placeholder="Ãrea">
+<input id="tpass" placeholder="ContraseÃ±a">
 
 <button id="btnGuardarTitular" onclick="guardarTitular()">Guardar</button>
 <button id="btnCancelarTitular" onclick="cancelarEdicionTitular()" style="display:none">Cancelar</button>
@@ -50,7 +50,7 @@
 <table>
 <thead>
 <tr>
-<th>Cédula</th><th>Nombre</th><th>Apellido</th><th>Tipo</th><th>Área</th><th>Acciones</th>
+<th>CÃ©dula</th><th>Nombre</th><th>Apellido</th><th>Tipo</th><th>Ãrea</th><th>Acciones</th>
 </tr>
 </thead>
 <tbody id="tablaTitulares"></tbody>
@@ -60,7 +60,7 @@
 </center>
 <script>
 
-const API = "http://localhost:8080/api";
+const API = "/api";
 
 async function request(url, method="GET", data=null){
     const opt = { method, headers: {"Content-Type":"application/json"} };

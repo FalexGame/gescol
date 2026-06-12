@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
@@ -69,7 +69,7 @@
 
 <script>
 
-const API = "http://localhost:8080/api";
+const API = "/api";
 
 async function request(url, method="GET", data=null){
     const opt = { method, headers: {"Content-Type":"application/json"} };
@@ -162,7 +162,7 @@ async function registrarSalida(){
             await request("/asistencia", "POST", datosSalida);
         }
 
-        // Auto-crear ControlRuta ENTREGA para que la ruta sepa que este alumno ya salió
+        // Auto-crear ControlRuta ENTREGA para que la ruta sepa que este alumno ya saliÃ³
         const alumno = await request("/alumnos/" + alumnoId);
         const rutaDestino = alumno.rutaSalida || alumno.rutaIngreso;
         if (rutaDestino) {
