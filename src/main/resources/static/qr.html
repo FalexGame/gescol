@@ -1,0 +1,493 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gescol - QR</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+    <style>
+        #reader {
+            width: 100%;
+            max-width: 400px;
+            margin: 10px auto;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        #reader video {
+            border-radius: 8px;
+        }
+        .qr-btn-group {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+        .btn-camera {
+            background: #9c27b0;
+        }
+        .btn-camera:hover {
+            background: #7b1fa2;
+        }
+        .btn-stop {
+            background: #f44336;
+        }
+        .btn-stop:hover {
+            background: #d32f2f;
+        }
+        .btn-file {
+            background: #ff9800;
+        }
+        .btn-file:hover {
+            background: #e68900;
+        }
+        .feedback-error {
+            color: #721c24;
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        .feedback-success {
+            color: #155724;
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        .feedback-info {
+            color: #004085;
+            background: #cce5ff;
+            border: 1px solid #b8daff;
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        .zona-carga {
+            border: 2px dashed #ccc;
+            border-radius: 12px;
+            padding: 30px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: 0.3s;
+            background: #fafafa;
+        }
+        .zona-carga:hover {
+            border-color: #58c718;
+            background: #f0faf0;
+        }
+        .zona-carga.dragover {
+            border-color: #58c718;
+            background: #e8f5e9;
+        }
+        #previewImg {
+            max-width: 100%;
+            max-height: 250px;
+            border-radius: 8px;
+            margin-top: 10px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+<nav class="navbar">
+    <div class="nav-left">
+        <img src="logo.png" alt="Logo">
+        <span>GESCOL</span>
+    </div>
+
+    <div class="nav-right">
+        <a href="index.html">Principal</a>
+        <a href="asistencia.html">Asistencia</a>
+        <a href="qr.html">QR</a>
+        <a href="salida.html">Salidas</a>
+        <a href="relacion.html">Acudientes</a>
+        <a href="titulares.html">Titulares</a>
+        <a href="transporte.html">Transporte</a>
+        <a href="rutas.html">Rutas</a>
+        <a href="grados.html">Grados</a>
+        <a href="alumnos.html">Alumnos</a>
+    </div>
+</nav>
+
+<div class="container" style="max-width:800px;margin:0 auto;">
+
+    <div class="card" style="text-align:center;">
+        <h2>Registro de Asistencia por QR</h2>
+
+        <!-- PESTAÑAS -->
+        <div style="display:flex;gap:0;margin-bottom:20px;border-bottom:2px solid #eee;">
+            <button id="tabCamara" onclick="activarPestana('camara')"
+                    style="flex:1;border-radius:8px 8px 0 0;background:#58c718;color:white;padding:12px;">
+                Cámara
+            </button>
+            <button id="tabFoto" onclick="activarPestana('foto')"
+                    style="flex:1;border-radius:8px 8px 0 0;background:#eee;color:#555;padding:12px;">
+                Tomar / Subir Foto
+            </button>
+            <button id="tabManual" onclick="activarPestana('manual')"
+                    style="flex:1;border-radius:8px 8px 0 0;background:#eee;color:#555;padding:12px;">
+                Manual
+            </button>
+        </div>
+
+        <!-- PANEL CÁMARA -->
+        <div id="panelCamara">
+            <p style="color:#555;">Apunte al código QR del estudiante</p>
+            <div id="camaraContainer"></div>
+            <div class="qr-btn-group">
+                <button id="btnCamara" class="btn-camera" onclick="iniciarCamara()" style="font-size:16px;padding:12px 30px;">
+                    Iniciar cámara
+                </button>
+                <button id="btnDetener" class="btn-stop" onclick="detenerCamara()" style="display:none;font-size:16px;padding:12px 30px;">
+                    Detener cámara
+                </button>
+            </div>
+            <div id="feedbackCamara"></div>
+        </div>
+
+        <!-- PANEL FOTO -->
+        <div id="panelFoto" style="display:none;">
+            <p style="color:#555;">Tome una foto del código QR o seleccione una imagen</p>
+            <div class="zona-carga" id="zonaCarga" onclick="document.getElementById('fileInput').click()">
+                <p style="font-size:40px;margin:0;">📷</p>
+                <p style="color:#888;font-size:16px;">Haga clic para tomar foto o seleccionar imagen</p>
+                <p style="color:#aaa;font-size:13px;">O arrastre una imagen aquí</p>
+                <input type="file" id="fileInput" accept="image/*" capture="environment"
+                       style="display:none;">
+            </div>
+            <img id="previewImg" alt="Vista previa">
+            <div id="botonesFoto" style="display:none;margin-top:10px;">
+                <button onclick="escanearFoto()" class="btn-file" style="font-size:16px;padding:12px 30px;">
+                    Escanear QR en esta imagen
+                </button>
+                <button onclick="limpiarFoto()" style="font-size:14px;padding:8px 20px;background:#888;">
+                    Quitar imagen
+                </button>
+            </div>
+            <div id="feedbackFoto"></div>
+        </div>
+
+        <!-- PANEL MANUAL -->
+        <div id="panelManual" style="display:none;">
+            <p style="color:#555;">Digite el código del estudiante</p>
+            <div style="display:flex;gap:10px;justify-content:center;align-items:center;flex-wrap:wrap;">
+                <input id="codigoInput" type="text" placeholder="Código (ej: EST001)"
+                       style="width:250px;font-size:18px;text-align:center;padding:10px;margin:0;">
+                <button onclick="registrarManual()" style="font-size:16px;padding:10px 25px;">Registrar</button>
+            </div>
+            <div id="feedbackManual" style="margin-top:10px;"></div>
+        </div>
+
+    </div>
+
+    <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+            <h3 style="margin:0;">Asistencia registrada hoy</h3>
+            <button onclick="cargarAsistenciaHoy()" style="font-size:13px;padding:6px 15px;">Actualizar</button>
+        </div>
+        <table>
+        <thead>
+        <tr>
+            <th>Código</th>
+            <th>Nombre</th>
+            <th>Apellido</th>
+            <th>Grado</th>
+            <th>Hora</th>
+        </tr>
+        </thead>
+        <tbody id="tablaQR"></tbody>
+        </table>
+    </div>
+
+</div>
+
+<script>
+
+const API = "/api";
+let html5QrCode = null;
+let camaraActiva = false;
+
+// ========== UTILIDADES ==========
+
+async function request(url, method="GET", data=null){
+    const opt = { method, headers: {"Content-Type":"application/json"} };
+    if(data) opt.body = JSON.stringify(data);
+    const res = await fetch(API+url, opt);
+    const ct = res.headers.get("content-type") || "";
+    let body;
+    if (ct.includes("application/json")) body = await res.json();
+    else body = await res.text();
+    if (!res.ok) throw new Error(typeof body === "string" ? body : body.error || "Error");
+    return body;
+}
+
+function feedback(id, tipo, texto){
+    const el = document.getElementById(id);
+    el.className = "feedback-" + tipo;
+    el.textContent = texto;
+    el.style.display = "block";
+}
+
+function limpiarFeedback(id){
+    const el = document.getElementById(id);
+    el.style.display = "none";
+    el.textContent = "";
+}
+
+// ========== PESTAÑAS ==========
+
+function activarPestana(pestana){
+    ["camara","foto","manual"].forEach(p => {
+        document.getElementById("panel" + p.charAt(0).toUpperCase() + p.slice(1)).style.display = p === pestana ? "" : "none";
+        const btn = document.getElementById("tab" + p.charAt(0).toUpperCase() + p.slice(1));
+        btn.style.background = p === pestana ? "#58c718" : "#eee";
+        btn.style.color = p === pestana ? "white" : "#555";
+    });
+    if (pestana !== "camara" && camaraActiva) detenerCamara();
+    if (pestana === "manual") document.getElementById("codigoInput").focus();
+}
+
+// ========== CÁMARA (html5-qrcode) ==========
+
+function iniciarCamara(){
+    const container = document.getElementById("camaraContainer");
+    container.innerHTML = "";
+
+    limpiarFeedback("feedbackCamara");
+    feedback("feedbackCamara", "info", "Solicitando acceso a la cámara...");
+
+    html5QrCode = new Html5Qrcode("camaraContainer");
+
+    html5QrCode.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: { width: 250, height: 250 } },
+        function(decodedText) {
+            // QR detectado exitosamente
+            limpiarFeedback("feedbackCamara");
+            feedback("feedbackCamara", "info", "Código detectado: " + decodedText + " - Registrando...");
+            if (html5QrCode) {
+                try { html5QrCode.pause(); } catch(e) {}
+            }
+            procesarCodigo(decodedText, function(exito){
+                if (exito) {
+                    limpiarFeedback("feedbackCamara");
+                    feedback("feedbackCamara", "success", "Asistencia registrada. Escaneando siguiente...");
+                } else {
+                    limpiarFeedback("feedbackCamara");
+                    feedback("feedbackCamara", "error", "Error al registrar. Intente de nuevo.");
+                }
+                if (camaraActiva && html5QrCode) {
+                    setTimeout(() => { try { html5QrCode.resume(); } catch(e) {} }, 1500);
+                }
+            });
+        },
+        function(errorMessage) {
+            // Error de escaneo (no encuentra QR en el frame), ignorar
+        }
+    ).then(() => {
+        camaraActiva = true;
+        document.getElementById("btnCamara").style.display = "none";
+        document.getElementById("btnDetener").style.display = "";
+        limpiarFeedback("feedbackCamara");
+        feedback("feedbackCamara", "info", "Cámara activada. Apunte al código QR.");
+    }).catch(err => {
+        limpiarFeedback("feedbackCamara");
+        feedback("feedbackCamara", "error",
+            "No se pudo acceder a la cámara. " +
+            (err.message || "Posibles causas: HTTPS requerido en celular, o permisos denegados.") +
+            " Use la pestaña 'Tomar / Subir Foto' o 'Manual'.");
+    });
+}
+
+function detenerCamara(){
+    if (html5QrCode) {
+        try {
+            html5QrCode.stop();
+            html5QrCode.clear();
+        } catch(e) {}
+        html5QrCode = null;
+    }
+    camaraActiva = false;
+    document.getElementById("btnCamara").style.display = "";
+    document.getElementById("btnDetener").style.display = "none";
+    document.getElementById("camaraContainer").innerHTML = "";
+    limpiarFeedback("feedbackCamara");
+}
+
+// ========== FOTO (jsQR) ==========
+
+document.getElementById("fileInput").addEventListener("change", function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+        const img = document.getElementById("previewImg");
+        img.src = ev.target.result;
+        img.style.display = "block";
+        document.getElementById("botonesFoto").style.display = "";
+        document.getElementById("zonaCarga").style.display = "none";
+        limpiarFeedback("feedbackFoto");
+        feedback("feedbackFoto", "info", "Imagen cargada. Haga clic en 'Escanear QR en esta imagen'.");
+    };
+    reader.readAsDataURL(file);
+});
+
+// Arrastrar y soltar
+const zona = document.getElementById("zonaCarga");
+zona.addEventListener("dragover", function(e){
+    e.preventDefault();
+    this.classList.add("dragover");
+});
+zona.addEventListener("dragleave", function(){
+    this.classList.remove("dragover");
+});
+zona.addEventListener("drop", function(e){
+    e.preventDefault();
+    this.classList.remove("dragover");
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith("image/")) {
+        document.getElementById("fileInput").files = e.dataTransfer.files;
+        document.getElementById("fileInput").dispatchEvent(new Event("change"));
+    } else {
+        feedback("feedbackFoto", "error", "Solo se aceptan imágenes.");
+    }
+});
+
+function limpiarFoto(){
+    document.getElementById("fileInput").value = "";
+    document.getElementById("previewImg").style.display = "none";
+    document.getElementById("previewImg").src = "";
+    document.getElementById("botonesFoto").style.display = "none";
+    document.getElementById("zonaCarga").style.display = "";
+    limpiarFeedback("feedbackFoto");
+}
+
+async function escanearFoto(){
+    const img = document.getElementById("previewImg");
+    if (!img.src || img.style.display === "none") {
+        feedback("feedbackFoto", "error", "Primero tome o seleccione una imagen.");
+        return;
+    }
+
+    limpiarFeedback("feedbackFoto");
+    feedback("feedbackFoto", "info", "Procesando imagen...");
+
+    try {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0);
+
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imageData.data, imageData.width, imageData.height);
+
+        if (code && code.data) {
+            limpiarFeedback("feedbackFoto");
+            feedback("feedbackFoto", "info", "Código detectado: " + code.data + " - Registrando...");
+            procesarCodigo(code.data, function(exito){
+                if (exito) {
+                    limpiarFeedback("feedbackFoto");
+                    feedback("feedbackFoto", "success", "Asistencia registrada correctamente.");
+                    limpiarFoto();
+                } else {
+                    limpiarFeedback("feedbackFoto");
+                    feedback("feedbackFoto", "error", "Error al registrar la asistencia.");
+                }
+            });
+        } else {
+            feedback("feedbackFoto", "error",
+                "No se encontró un código QR en la imagen. Asegúrese de que el código esté bien visible y con buena iluminación.");
+        }
+    } catch(e) {
+        feedback("feedbackFoto", "error",
+            "Error al procesar la imagen: " + (e.message || "Intente de nuevo con una foto más clara."));
+    }
+}
+
+// ========== REGISTRO ==========
+
+async function procesarCodigo(codigo, callback){
+    try {
+        const resultado = await request("/asistencia/qr", "POST", { codigo: codigo.trim() });
+        document.getElementById("codigoInput").value = "";
+        cargarAsistenciaHoy();
+        if (callback) callback(true);
+    } catch(e) {
+        if (callback) callback(false);
+    }
+}
+
+function registrarManual(){
+    const codigo = document.getElementById("codigoInput").value.trim();
+    if (!codigo) {
+        feedback("feedbackManual", "error", "Digite un código de estudiante");
+        return;
+    }
+    limpiarFeedback("feedbackManual");
+    feedback("feedbackManual", "info", "Registrando " + codigo + "...");
+
+    procesarCodigo(codigo, function(exito){
+        if (exito) {
+            feedback("feedbackManual", "success", "Asistencia registrada correctamente.");
+            document.getElementById("codigoInput").value = "";
+            document.getElementById("codigoInput").focus();
+        } else {
+            feedback("feedbackManual", "error", "Error al registrar. Verifique el código.");
+        }
+    });
+}
+
+// ========== TABLA ==========
+
+async function cargarAsistenciaHoy(){
+    const hoy = new Date().toISOString().split("T")[0];
+    try {
+        const todas = await request("/asistencia/fecha/" + hoy);
+        const tbody = document.getElementById("tablaQR");
+        tbody.innerHTML = "";
+
+        if (todas.length === 0) {
+            tbody.innerHTML = "<tr><td colspan='5'>No hay asistencia registrada hoy</td></tr>";
+            return;
+        }
+
+        todas.forEach(r => {
+            const hora = r.fechaRegistro
+                ? new Date(r.fechaRegistro).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                : "-";
+            tbody.innerHTML += `
+            <tr>
+                <td>${r.alumno.codigoEstudiantil}</td>
+                <td>${r.alumno.nombre}</td>
+                <td>${r.alumno.apellido}</td>
+                <td>${r.alumno.grado ? r.alumno.grado.nombre : "-"}</td>
+                <td>${hora}</td>
+            </tr>`;
+        });
+    } catch(e) {}
+}
+
+// ========== EVENTOS ==========
+
+document.getElementById("codigoInput").addEventListener("keydown", function(e) {
+    if (e.key === "Enter") registrarManual();
+});
+
+window.onload = () => {
+    cargarAsistenciaHoy();
+};
+
+</script>
+
+</body>
+</html>

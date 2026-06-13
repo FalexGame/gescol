@@ -9,6 +9,8 @@ public interface AsistenciaService {
 
     Asistencia registrar(Asistencia asistencia);
 
+    Asistencia registrarPorQR(String codigoEstudiantil);
+
     Asistencia actualizar(Long id, Asistencia asistencia);
 
     List<Asistencia> listar();

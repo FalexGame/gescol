@@ -2,6 +2,7 @@ package com.gescol.asistecia.controller;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
@@ -17,6 +18,21 @@ public class AsistenciaController {
 
     @Autowired
     private AsistenciaService asistenciaService;
+
+    // REGISTRAR POR QR
+    @PostMapping("/qr")
+    public ResponseEntity<?> registrarPorQR(@RequestBody Map<String, String> body) {
+        String codigo = body.get("codigo");
+        if (codigo == null || codigo.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Código de estudiante requerido"));
+        }
+        try {
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(asistenciaService.registrarPorQR(codigo.trim()));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
 
     // REGISTRAR
     @PostMapping

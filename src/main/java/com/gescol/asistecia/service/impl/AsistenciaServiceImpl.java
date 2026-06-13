@@ -24,6 +24,27 @@ public class AsistenciaServiceImpl implements AsistenciaService {
     private TitularRepository titularRepository;
 
     @Override
+    public Asistencia registrarPorQR(String codigoEstudiantil) {
+        Alumno alumno = alumnoRepository.findByCodigoEstudiantil(codigoEstudiantil)
+                .orElseThrow(() -> new RuntimeException("Estudiante no encontrado con código: " + codigoEstudiantil));
+
+        LocalDate hoy = LocalDate.now();
+
+        if (asistenciaRepository.existsByAlumnoIdAndFecha(alumno.getId(), hoy)) {
+            throw new RuntimeException("Ya existe asistencia registrada para este alumno en la fecha de hoy");
+        }
+
+        Asistencia asistencia = new Asistencia();
+        asistencia.setAlumno(alumno);
+        asistencia.setFecha(hoy);
+        asistencia.setEstado(EstadoAsistencia.ASISTIO);
+        asistencia.setSalidaAnticipada(false);
+        asistencia.setFechaRegistro(LocalDateTime.now());
+
+        return asistenciaRepository.save(asistencia);
+    }
+
+    @Override
     public Asistencia registrar(Asistencia asistencia) {
 
         //  Validar alumno
